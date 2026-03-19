@@ -50,7 +50,7 @@ odds-admin/
 |---|---|---|
 | Backend framework | FastAPI | Async-first, auto OpenAPI docs, Pydantic integration, scales to customer app |
 | Database ORM | SQLAlchemy (async) | Clean Python models for read-heavy admin queries, mirrors existing schema |
-| DB driver | psycopg2 / asyncpg | Consistent with odds-pipeline credentials and connection config |
+| DB driver | asyncpg | Required for async SQLAlchemy; odds-pipeline uses psycopg2 for its own sync ETL but this app uses asyncpg independently |
 | Frontend framework | React + TypeScript | Widest ecosystem, reusable across admin and future customer app |
 | Build tool | Vite | Fast local dev, simple static build output |
 | UI components | shadcn/ui + Tailwind CSS | Dark theme, composable, no opinionated lock-in, scales to customer app branding |
@@ -64,8 +64,9 @@ SQLAlchemy ORM models mirror the existing `odds_db` schema created by odds-pipel
 
 **Models:**
 - `Game` — maps to `games` table (`game_id`, `home_team`, `away_team`, `commence_time`, `season`, `sport`)
-- `Odds` — maps to `odds` table (`game_id`, `bookmaker`, `market_type`, `outcome_name`, `price`, `point`, `last_update`, `fetched_at`)
-- `PlayerProp` — maps to `player_props` table (`game_id`, `bookmaker`, `player_name`, `prop_type`, `outcome`, `price`, `point`)
+- `Odds` — maps to `odds` table. PK: `id` (SERIAL). Columns: `game_id`, `bookmaker`, `market_type`, `outcome_name`, `price`, `point`, `last_update`, `fetched_at`.
+- `PlayerProp` — maps to `player_props` table. PK: `id` (SERIAL). Columns: `game_id`, `bookmaker`, `player_name`, `prop_type`, `outcome`, `price`, `point`, `last_update`, `fetched_at`.
+- No ORM model for `raw_api_responses` — that table is fully out of scope for v1.
 - `Score` — maps to `scores` table (`game_id`, `home_score`, `away_score`, `completed`, `last_update`, `fetched_at`)
 
 ---
@@ -76,8 +77,8 @@ All endpoints are read-only (GET). No write operations.
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/games` | List all games ordered by `commence_time` desc. Response includes basic game info and score (if available) for rendering the collapsed game row. |
-| `GET /api/games/{game_id}/odds` | Latest odds per bookmaker per market type for a game. Deduped to most recent `fetched_at` per `(bookmaker, market_type, outcome_name)`. |
+| `GET /api/games` | List all games ordered by `commence_time` desc. Each item includes game fields plus a nullable `score` sub-object: `{ home_score, away_score, completed }`. Implemented as a LEFT JOIN on `scores`. |
+| `GET /api/games/{game_id}/odds` | Latest odds for a game. Deduped to most recent `fetched_at` per `(bookmaker, market_type, outcome_name)` — this is the authoritative deduplication key used everywhere in this spec. |
 | `GET /api/games/{game_id}/props` | All player props for a game, grouped by player name. |
 | `GET /api/games/{game_id}/scores` | Score record for a game. |
 
@@ -104,7 +105,7 @@ Clicking a game card expands it inline to reveal three tabs:
 **Odds tab**
 - Market type filter chips: H2H · Spreads · Totals
 - Table columns: Bookmaker · Outcome · Price · Last Update
-- Shows latest odds only (most recent `fetched_at` per bookmaker + outcome combination)
+- Shows latest odds only (most recent `fetched_at` per `(bookmaker, market_type, outcome_name)` — consistent with the API deduplication key)
 
 **Player Props tab**
 - Prop type filter chips: All · Points · Rebounds · Assists
@@ -128,7 +129,7 @@ odds-admin:
     context: ../odds-admin
     dockerfile: Dockerfile
   ports:
-    - "8000:8000"
+    - "8080:8000"  # Host port 8080 avoids conflict with common local dev servers on 8000
   environment:
     - DATA_DB_HOST=data-postgres
     - DATA_DB_PORT=5432
@@ -145,7 +146,7 @@ odds-admin:
 - Stage 1 (node): `npm ci && npm run build` — outputs to `web/dist/`
 - Stage 2 (python): copies `web/dist/` to `/app/static/`, installs Python deps, runs `uvicorn api.main:app`
 
-FastAPI mounts `/app/static` at `/` and serves `index.html` for all non-API routes (SPA fallback).
+**Mount order in `main.py`:** API routers are registered first (`app.include_router(...)`). After all routers, `StaticFiles` is mounted with `html=True` to serve `index.html` as the SPA fallback for any path not matched by an API route. This ensures `/api/*` routes are never intercepted by the static file handler.
 
 ---
 
