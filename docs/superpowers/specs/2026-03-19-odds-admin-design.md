@@ -129,7 +129,7 @@ odds-admin:
     context: ../odds-admin
     dockerfile: Dockerfile
   ports:
-    - "8080:8000"  # Host port 8080 avoids conflict with common local dev servers on 8000
+    - "8001:8000"  # Host port 8001 — avoids conflict with Airflow (8080) and common local dev servers (8000)
   environment:
     - DATA_DB_HOST=data-postgres
     - DATA_DB_PORT=5432
