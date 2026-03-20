@@ -22,12 +22,12 @@ A local admin web app for viewing NBA game, odds, player prop, and score data po
 
 ## Running with odds-pipeline (recommended)
 
-odds-admin is integrated into the odds-pipeline docker-compose stack as the `odds-admin` service.
+odds-admin is integrated into the odds-pipeline docker compose stack as the `odds-admin` service.
 
 From the `odds-pipeline/` directory:
 
 ```bash
-docker-compose up odds-admin data-postgres --build
+docker compose up odds-admin data-postgres --build
 ```
 
 Open http://localhost:8001 — the React app will load and connect to the database automatically.
