@@ -7,3 +7,6 @@ app.include_router(games.router, prefix="/api")
 
 from api.routers import odds
 app.include_router(odds.router, prefix="/api")
+
+from api.routers import props
+app.include_router(props.router, prefix="/api")
