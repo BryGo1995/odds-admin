@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone, date
 from pydantic import BaseModel
 
 
@@ -52,5 +52,32 @@ class ScoreItem(BaseModel):
     completed: bool
     last_update: datetime | None
     fetched_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PlayerListItem(BaseModel):
+    player_id: int
+    full_name: str
+    position: str | None
+    team_abbreviation: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class PlayerGameLogItem(BaseModel):
+    game_date: date
+    matchup: str | None
+    wl: str | None
+    min: float | None
+    fga: int | None
+    fta: int | None
+    usg_pct: float | None
+    pts: int | None
+    reb: int | None
+    ast: int | None
+    blk: int | None
+    stl: int | None
+    plus_minus: int | None
 
     model_config = {"from_attributes": True}

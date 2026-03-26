@@ -51,3 +51,70 @@ def test_score_item_serializes():
         fetched_at=datetime(2026, 3, 19, 22, 0),
     )
     assert item.completed is True
+
+
+from datetime import date
+from api.schemas import PlayerListItem, PlayerGameLogItem
+
+
+def test_player_list_item():
+    item = PlayerListItem(
+        player_id=2544,
+        full_name="LeBron James",
+        position="F",
+        team_abbreviation="LAL",
+    )
+    assert item.player_id == 2544
+    assert item.full_name == "LeBron James"
+    assert item.position == "F"
+    assert item.team_abbreviation == "LAL"
+
+
+def test_player_list_item_nullable_fields():
+    item = PlayerListItem(
+        player_id=1234,
+        full_name="Mystery Player",
+        position=None,
+        team_abbreviation=None,
+    )
+    assert item.position is None
+
+
+def test_player_game_log_item():
+    item = PlayerGameLogItem(
+        game_date=date(2026, 3, 20),
+        matchup="LAL vs. GSW",
+        wl="W",
+        min=34.5,
+        fga=14,
+        fta=6,
+        usg_pct=0.285,
+        pts=28,
+        reb=8,
+        ast=7,
+        blk=1,
+        stl=2,
+        plus_minus=12,
+    )
+    assert item.pts == 28
+    assert item.game_date == date(2026, 3, 20)
+    assert item.wl == "W"
+
+
+def test_player_game_log_item_nullable_stats():
+    item = PlayerGameLogItem(
+        game_date=date(2026, 3, 20),
+        matchup=None,
+        wl=None,
+        min=None,
+        fga=None,
+        fta=None,
+        usg_pct=None,
+        pts=None,
+        reb=None,
+        ast=None,
+        blk=None,
+        stl=None,
+        plus_minus=None,
+    )
+    assert item.pts is None
