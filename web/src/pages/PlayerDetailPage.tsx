@@ -71,29 +71,28 @@ export function PlayerDetailPage() {
   const [lastN, setLastN] = useState<number | null>(null);
   const [statCategory, setStatCategory] = useState<StatCategory>("all");
 
+  // Fetch player and props when player ID changes
   useEffect(() => {
     setLoading(true);
+    setError(null);
     Promise.all([
       fetchPlayer(playerId),
       fetchPlayerProps(playerId),
-      fetchPlayerGameLogs(playerId, season),
     ])
-      .then(([playerData, propsData, logsData]) => {
+      .then(([playerData, propsData]) => {
         setPlayer(playerData);
         setProps(propsData);
-        setGameLogs(logsData);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [playerId]);
 
-  // Re-fetch game logs when season changes
+  // Fetch game logs when player ID or season changes
   useEffect(() => {
-    if (!player) return;
     fetchPlayerGameLogs(playerId, season)
       .then(setGameLogs)
       .catch((e) => setError(e.message));
-  }, [season]);
+  }, [playerId, season]);
 
   if (loading) {
     return <p className="px-6 py-8 text-slate-500">Loading...</p>;
