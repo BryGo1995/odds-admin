@@ -36,6 +36,18 @@ class Odds(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class Player(Base):
+    __tablename__ = "players"
+
+    player_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    full_name: Mapped[str] = mapped_column(String(200))
+    position: Mapped[str | None] = mapped_column(String(10))
+    team_id: Mapped[int | None] = mapped_column(Integer)
+    team_abbreviation: Mapped[str | None] = mapped_column(String(10))
+    is_active: Mapped[bool | None] = mapped_column(Boolean)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class PlayerProp(Base):
     __tablename__ = "player_props"
 
@@ -70,18 +82,6 @@ class Score(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
 
     game: Mapped["Game"] = relationship("Game", back_populates="score")
-
-
-class Player(Base):
-    __tablename__ = "players"
-
-    player_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    full_name: Mapped[str] = mapped_column(String(200))
-    position: Mapped[str | None] = mapped_column(String(10))
-    team_id: Mapped[int | None] = mapped_column(Integer)
-    team_abbreviation: Mapped[str | None] = mapped_column(String(10))
-    is_active: Mapped[bool | None] = mapped_column(Boolean)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class PlayerGameLog(Base):
