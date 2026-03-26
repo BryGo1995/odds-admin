@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime, timezone, date
+from datetime import datetime, date
 from pydantic import BaseModel
 
 

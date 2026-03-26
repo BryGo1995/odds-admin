@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
-from api.schemas import GameListItem, ScoreEmbed, OddsItem, PlayerPropItem, ScoreItem
+from api.schemas import GameListItem, ScoreEmbed, OddsItem, PlayerPropItem, ScoreItem, PlayerListItem, PlayerGameLogItem
 
 
 def test_game_list_item_no_score():
@@ -51,10 +51,6 @@ def test_score_item_serializes():
         fetched_at=datetime(2026, 3, 19, 22, 0),
     )
     assert item.completed is True
-
-
-from datetime import date
-from api.schemas import PlayerListItem, PlayerGameLogItem
 
 
 def test_player_list_item():
