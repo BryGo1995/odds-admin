@@ -41,6 +41,29 @@ export interface ScoreItem {
   fetched_at: string;
 }
 
+export interface PlayerListItem {
+  player_id: number;
+  full_name: string;
+  position: string | null;
+  team_abbreviation: string | null;
+}
+
+export interface PlayerGameLogItem {
+  game_date: string;
+  matchup: string | null;
+  wl: string | null;
+  min: number | null;
+  fga: number | null;
+  fta: number | null;
+  usg_pct: number | null;
+  pts: number | null;
+  reb: number | null;
+  ast: number | null;
+  blk: number | null;
+  stl: number | null;
+  plus_minus: number | null;
+}
+
 const BASE = "/api";
 
 export async function fetchGames(): Promise<Game[]> {
@@ -65,5 +88,32 @@ export async function fetchScore(gameId: string): Promise<ScoreItem | null> {
   const res = await fetch(`${BASE}/games/${gameId}/scores`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Failed to fetch score");
+  return res.json();
+}
+
+export async function fetchPlayers(): Promise<PlayerListItem[]> {
+  const res = await fetch(`${BASE}/players`);
+  if (!res.ok) throw new Error("Failed to fetch players");
+  return res.json();
+}
+
+export async function fetchPlayer(playerId: number): Promise<PlayerListItem> {
+  const res = await fetch(`${BASE}/players/${playerId}`);
+  if (!res.ok) throw new Error("Player not found");
+  return res.json();
+}
+
+export async function fetchPlayerProps(playerId: number): Promise<PlayerPropItem[]> {
+  const res = await fetch(`${BASE}/players/${playerId}/props`);
+  if (!res.ok) throw new Error("Failed to fetch player props");
+  return res.json();
+}
+
+export async function fetchPlayerGameLogs(
+  playerId: number,
+  season = "2025-26"
+): Promise<PlayerGameLogItem[]> {
+  const res = await fetch(`${BASE}/players/${playerId}/game-logs?season=${season}`);
+  if (!res.ok) throw new Error("Failed to fetch player game logs");
   return res.json();
 }
