@@ -1,17 +1,29 @@
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime, timezone, date
 from pydantic import BaseModel
 
 
-class ScoreEmbed(BaseModel):
+def _as_utc(v: datetime) -> str:
+    """Serialize a naive datetime as UTC ISO-8601 (appends Z if no tzinfo)."""
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=timezone.utc)
+    return v.isoformat()
+
+
+class _Base(BaseModel):
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {datetime: _as_utc},
+    }
+
+
+class ScoreEmbed(_Base):
     home_score: int | None
     away_score: int | None
     completed: bool
 
-    model_config = {"from_attributes": True}
 
-
-class GameListItem(BaseModel):
+class GameListItem(_Base):
     game_id: str
     home_team: str | None
     away_team: str | None
@@ -20,10 +32,8 @@ class GameListItem(BaseModel):
     sport: str | None
     score: ScoreEmbed | None
 
-    model_config = {"from_attributes": True}
 
-
-class OddsItem(BaseModel):
+class OddsItem(_Base):
     bookmaker: str | None
     market_type: str | None
     outcome_name: str | None
@@ -31,10 +41,8 @@ class OddsItem(BaseModel):
     point: Decimal | None
     last_update: datetime | None
 
-    model_config = {"from_attributes": True}
 
-
-class PlayerPropItem(BaseModel):
+class PlayerPropItem(_Base):
     bookmaker: str | None
     player_name: str | None
     prop_type: str | None
@@ -42,10 +50,8 @@ class PlayerPropItem(BaseModel):
     price: Decimal | None
     point: Decimal | None
 
-    model_config = {"from_attributes": True}
 
-
-class ScoreItem(BaseModel):
+class ScoreItem(_Base):
     game_id: str | None
     home_score: int | None
     away_score: int | None
@@ -53,19 +59,15 @@ class ScoreItem(BaseModel):
     last_update: datetime | None
     fetched_at: datetime
 
-    model_config = {"from_attributes": True}
 
-
-class PlayerListItem(BaseModel):
+class PlayerListItem(_Base):
     player_id: int
     full_name: str
     position: str | None
     team_abbreviation: str | None
 
-    model_config = {"from_attributes": True}
 
-
-class PlayerGameLogItem(BaseModel):
+class PlayerGameLogItem(_Base):
     game_date: date
     matchup: str | None
     wl: str | None
@@ -79,5 +81,3 @@ class PlayerGameLogItem(BaseModel):
     blk: int | None
     stl: int | None
     plus_minus: int | None
-
-    model_config = {"from_attributes": True}
