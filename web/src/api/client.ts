@@ -64,6 +64,21 @@ export interface PlayerGameLogItem {
   plus_minus: number | null;
 }
 
+export interface PropRecommendationItem {
+  id: number;
+  player_name: string | null;
+  prop_type: string | null;
+  bookmaker: string | null;
+  line: number | null;
+  outcome: string | null;
+  model_prob: number | null;
+  implied_prob: number | null;
+  edge: number | null;
+  rank: number | null;
+  model_version: string | null;
+  game_date: string | null;
+}
+
 const BASE = "/api";
 
 export async function fetchGames(): Promise<Game[]> {
@@ -115,5 +130,17 @@ export async function fetchPlayerGameLogs(
 ): Promise<PlayerGameLogItem[]> {
   const res = await fetch(`${BASE}/players/${playerId}/game-logs?season=${season}`);
   if (!res.ok) throw new Error("Failed to fetch player game logs");
+  return res.json();
+}
+
+export async function fetchRecommendations(date: string): Promise<PropRecommendationItem[]> {
+  const res = await fetch(`${BASE}/recommendations?date=${date}`);
+  if (!res.ok) throw new Error("Failed to fetch recommendations");
+  return res.json();
+}
+
+export async function fetchTopRecommendations(date: string, limit = 5): Promise<PropRecommendationItem[]> {
+  const res = await fetch(`${BASE}/recommendations/top?date=${date}&limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to fetch top recommendations");
   return res.json();
 }
