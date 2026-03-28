@@ -1,0 +1,138 @@
+import pytest
+from datetime import date
+from decimal import Decimal
+from api.models import PropRecommendation
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _rec(
+    player_name: str,
+    prop_type: str,
+    bookmaker: str,
+    rank: int,
+    game_date: date,
+    edge: float = 0.10,
+    model_prob: float = 0.60,
+    implied_prob: float = 0.50,
+    line: float = 24.5,
+    outcome: str = "Over",
+    model_version: str = "v3",
+) -> PropRecommendation:
+    return PropRecommendation(
+        player_name=player_name,
+        prop_type=prop_type,
+        bookmaker=bookmaker,
+        line=Decimal(str(line)),
+        outcome=outcome,
+        model_prob=Decimal(str(model_prob)),
+        implied_prob=Decimal(str(implied_prob)),
+        edge=Decimal(str(edge)),
+        rank=rank,
+        model_version=model_version,
+        game_date=game_date,
+    )
+
+
+# ── GET /api/recommendations ──────────────────────────────────────────────────
+
+async def test_list_recommendations_empty(client):
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_list_recommendations_returns_all_for_date(client, db):
+    today = date(2026, 3, 28)
+    db.add(_rec("LeBron James", "player_points", "DraftKings", 1, today, edge=0.13))
+    db.add(_rec("Stephen Curry", "player_assists", "FanDuel", 2, today, edge=0.09))
+    db.add(_rec("Nikola Jokic", "player_rebounds", "BetMGM", 3, date(2026, 3, 27), edge=0.08))
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["player_name"] == "LeBron James"
+    assert data[1]["player_name"] == "Stephen Curry"
+
+
+async def test_list_recommendations_ordered_by_rank(client, db):
+    today = date(2026, 3, 28)
+    db.add(_rec("C Player", "player_points", "DraftKings", 3, today))
+    db.add(_rec("A Player", "player_points", "DraftKings", 1, today))
+    db.add(_rec("B Player", "player_points", "DraftKings", 2, today))
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    ranks = [r["rank"] for r in data]
+    assert ranks == [1, 2, 3]
+
+
+async def test_list_recommendations_defaults_to_today(client, db):
+    import datetime as dt
+    today = dt.date.today()
+    db.add(_rec("Today Player", "player_points", "DraftKings", 1, today))
+    await db.commit()
+
+    response = await client.get("/api/recommendations")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["player_name"] == "Today Player"
+
+
+# ── GET /api/recommendations/top ─────────────────────────────────────────────
+
+async def test_top_recommendations_returns_top_5_by_default(client, db):
+    today = date(2026, 3, 28)
+    for i in range(1, 8):
+        db.add(_rec(f"Player {i}", "player_points", "DraftKings", i, today))
+    await db.commit()
+
+    response = await client.get("/api/recommendations/top?date=2026-03-28")
+    data = response.json()
+    assert len(data) == 5
+    assert data[0]["rank"] == 1
+    assert data[4]["rank"] == 5
+
+
+async def test_top_recommendations_respects_limit(client, db):
+    today = date(2026, 3, 28)
+    for i in range(1, 8):
+        db.add(_rec(f"Player {i}", "player_points", "DraftKings", i, today))
+    await db.commit()
+
+    response = await client.get("/api/recommendations/top?date=2026-03-28&limit=3")
+    data = response.json()
+    assert len(data) == 3
+
+
+async def test_top_recommendations_empty(client):
+    response = await client.get("/api/recommendations/top?date=2026-03-28")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_top_recommendations_includes_all_fields(client, db):
+    today = date(2026, 3, 28)
+    db.add(_rec(
+        "LeBron James", "player_points", "DraftKings", 1, today,
+        edge=0.132, model_prob=0.65, implied_prob=0.518, line=24.5,
+        outcome="Over", model_version="v3",
+    ))
+    await db.commit()
+
+    response = await client.get("/api/recommendations/top?date=2026-03-28")
+    data = response.json()
+    assert len(data) == 1
+    r = data[0]
+    assert r["player_name"] == "LeBron James"
+    assert r["prop_type"] == "player_points"
+    assert r["bookmaker"] == "DraftKings"
+    assert float(r["line"]) == 24.5
+    assert r["outcome"] == "Over"
+    assert float(r["model_prob"]) == pytest.approx(0.65, abs=1e-4)
+    assert float(r["implied_prob"]) == pytest.approx(0.518, abs=1e-4)
+    assert float(r["edge"]) == pytest.approx(0.132, abs=1e-4)
+    assert r["rank"] == 1
+    assert r["model_version"] == "v3"
