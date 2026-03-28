@@ -103,8 +103,12 @@ function RecommendationsTable({
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const propTypes = ["all", ...Array.from(new Set(rows.map((r) => r.prop_type ?? ""))).sort()];
-  const bookmakers = ["all", ...Array.from(new Set(rows.map((r) => r.bookmaker ?? ""))).sort()];
+  const propTypes = ["all", ...Array.from(
+    new Set(rows.map((r) => r.prop_type).filter((t): t is string => t !== null))
+  ).sort()];
+  const bookmakers = ["all", ...Array.from(
+    new Set(rows.map((r) => r.bookmaker).filter((b): b is string => b !== null))
+  ).sort()];
 
   const filtered = rows.filter((r) => {
     if (propTypeFilter !== "all" && r.prop_type !== propTypeFilter) return false;
@@ -135,16 +139,16 @@ function RecommendationsTable({
     return <span className="text-blue-400 ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
   }
 
-  const cols: { label: string; key: SortKey; fmt?: (v: PropRecommendationItem) => string }[] = [
+  const cols: { label: string; key: SortKey }[] = [
     { label: "Rank", key: "rank" },
     { label: "Player", key: "player_name" },
-    { label: "Prop Type", key: "prop_type", fmt: (r) => r.prop_type?.replace("player_", "") ?? "—" },
+    { label: "Prop Type", key: "prop_type" },
     { label: "Line", key: "line" },
     { label: "Outcome", key: "outcome" },
     { label: "Bookmaker", key: "bookmaker" },
-    { label: "Edge", key: "edge", fmt: (r) => formatPct(r.edge) },
-    { label: "Model Prob", key: "model_prob", fmt: (r) => formatProb(r.model_prob) },
-    { label: "Impl. Prob", key: "implied_prob", fmt: (r) => formatProb(r.implied_prob) },
+    { label: "Edge", key: "edge" },
+    { label: "Model Prob", key: "model_prob" },
+    { label: "Impl. Prob", key: "implied_prob" },
     { label: "Model Ver.", key: "model_version" },
   ];
 
@@ -235,6 +239,7 @@ export function RecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCurrent = true;
     setLoading(true);
     setError(null);
     Promise.all([
@@ -242,11 +247,13 @@ export function RecommendationsPage() {
       fetchRecommendations(date),
     ])
       .then(([top, all]) => {
+        if (!isCurrent) return;
         setTopPicks(top);
         setAllRecs(all);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e) => { if (isCurrent) setError(e.message); })
+      .finally(() => { if (isCurrent) setLoading(false); });
+    return () => { isCurrent = false; };
   }, [date]);
 
   function prevDay() {
