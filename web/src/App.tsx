@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import { GamesPage } from "./pages/GamesPage";
 import { PlayersPage } from "./pages/PlayersPage";
 import { PlayerDetailPage } from "./pages/PlayerDetailPage";
+import { RecommendationsPage } from "./pages/RecommendationsPage";
 import { cn } from "@/lib/utils";
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -32,9 +33,7 @@ function Layout() {
         <div className="flex gap-4 text-sm">
           <NavLink to="/">Games</NavLink>
           <NavLink to="/players">Players</NavLink>
-          <span className="text-slate-500 cursor-not-allowed text-sm" title="Coming soon">
-            Raw Data
-          </span>
+          <NavLink to="/recommendations">Recommendations</NavLink>
         </div>
       </nav>
 
@@ -42,6 +41,7 @@ function Layout() {
         <Route path="/" element={<GamesPage />} />
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/players/:id" element={<PlayerDetailPage />} />
+        <Route path="/recommendations" element={<RecommendationsPage />} />
       </Routes>
     </div>
   );
