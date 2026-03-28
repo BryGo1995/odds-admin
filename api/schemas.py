@@ -81,3 +81,18 @@ class PlayerGameLogItem(_Base):
     blk: int | None
     stl: int | None
     plus_minus: int | None
+
+
+class PropRecommendationItem(_Base):
+    id: int
+    player_name: str | None
+    prop_type: str | None
+    bookmaker: str | None
+    line: Decimal | None
+    outcome: str | None
+    model_prob: Decimal | None
+    implied_prob: Decimal | None
+    edge: Decimal | None
+    rank: int | None
+    model_version: str | None
+    game_date: date | None

@@ -71,9 +71,8 @@ class PlayerProp(Base):
 class Score(Base):
     __tablename__ = "scores"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    game_id: Mapped[str | None] = mapped_column(
-        String(100), ForeignKey("games.game_id"), unique=True
+    game_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("games.game_id"), primary_key=True
     )
     home_score: Mapped[int | None] = mapped_column(Integer)
     away_score: Mapped[int | None] = mapped_column(Integer)
@@ -107,3 +106,20 @@ class PlayerGameLog(Base):
     stl: Mapped[int | None] = mapped_column(Integer)
     plus_minus: Mapped[int | None] = mapped_column(Integer)
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class PropRecommendation(Base):
+    __tablename__ = "recommendations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_name: Mapped[str | None] = mapped_column(String(100))
+    prop_type: Mapped[str | None] = mapped_column(String(100))
+    bookmaker: Mapped[str | None] = mapped_column(String(50))
+    line: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    outcome: Mapped[str | None] = mapped_column(String(20))
+    model_prob: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    implied_prob: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    edge: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
+    rank: Mapped[int | None] = mapped_column(Integer)
+    model_version: Mapped[str | None] = mapped_column(String(50))
+    game_date: Mapped[date | None] = mapped_column(Date)
