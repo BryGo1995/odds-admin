@@ -95,4 +95,18 @@ class PropRecommendationItem(_Base):
     edge: Decimal | None
     rank: int | None
     model_version: str | None
-    game_date: date | None
+    game_date:         date | None
+    actual_result:     bool | None = None
+    actual_stat_value: Decimal | None = None
+    settled_at:        datetime | None = None
+
+
+class AccuracySummaryItem(_Base):
+    game_date:       date
+    top_10_hits:     int
+    top_10_total:    int
+    top_10_hit_rate: float | None
+    avg_edge_hits:   float | None
+    avg_edge_misses: float | None
+    settled:         int
+    total:           int

@@ -122,4 +122,7 @@ class PropRecommendation(Base):
     edge: Mapped[Decimal | None] = mapped_column(Numeric(10, 6))
     rank: Mapped[int | None] = mapped_column(Integer)
     model_version: Mapped[str | None] = mapped_column(String(50))
-    game_date: Mapped[date | None] = mapped_column(Date)
+    game_date:         Mapped[date | None]     = mapped_column(Date)
+    actual_result:     Mapped[bool | None]     = mapped_column(Boolean)
+    actual_stat_value: Mapped[Decimal | None]  = mapped_column(Numeric(10, 2))
+    settled_at:        Mapped[datetime | None]  = mapped_column(DateTime(timezone=True))

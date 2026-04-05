@@ -136,3 +136,35 @@ async def test_top_recommendations_includes_all_fields(client, db):
     assert float(r["edge"]) == pytest.approx(0.132, abs=1e-4)
     assert r["rank"] == 1
     assert r["model_version"] == "v3"
+
+
+# ── Outcome fields on existing endpoints ─────────────────────────────────────
+
+async def test_list_recommendations_includes_outcome_fields(client, db):
+    today = date(2026, 3, 28)
+    rec = _rec("LeBron James", "player_points", "DraftKings", 1, today)
+    rec.actual_result = True
+    rec.actual_stat_value = Decimal("27.0")
+    from datetime import datetime, timezone
+    rec.settled_at = datetime(2026, 3, 29, 12, 0, tzinfo=timezone.utc)
+    db.add(rec)
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["actual_result"] is True
+    assert float(data[0]["actual_stat_value"]) == 27.0
+    assert data[0]["settled_at"] is not None
+
+
+async def test_list_recommendations_outcome_null_when_unsettled(client, db):
+    today = date(2026, 3, 28)
+    db.add(_rec("Player A", "player_points", "DraftKings", 1, today))
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    assert data[0]["actual_result"] is None
+    assert data[0]["actual_stat_value"] is None
+    assert data[0]["settled_at"] is None
