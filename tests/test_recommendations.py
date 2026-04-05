@@ -168,3 +168,87 @@ async def test_list_recommendations_outcome_null_when_unsettled(client, db):
     assert data[0]["actual_result"] is None
     assert data[0]["actual_stat_value"] is None
     assert data[0]["settled_at"] is None
+
+
+# ── GET /api/recommendations/accuracy ────────────────────────────────────────
+
+async def test_accuracy_returns_zeros_when_no_recs(client):
+    response = await client.get("/api/recommendations/accuracy?date=2026-03-28")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["top_10_hits"] == 0
+    assert data["top_10_total"] == 0
+    assert data["top_10_hit_rate"] is None
+    assert data["total"] == 0
+
+
+async def test_accuracy_counts_hits_and_misses(client, db):
+    game_date = date(2026, 3, 28)
+    for i, (result, edge) in enumerate([(True, 0.10), (True, 0.08), (False, 0.06)], start=1):
+        r = _rec(f"Player {i}", "player_points", "DraftKings", i, game_date, edge=edge)
+        r.actual_result = result
+        r.actual_stat_value = Decimal("25.0")
+        from datetime import datetime, timezone
+        r.settled_at = datetime(2026, 3, 29, 12, 0, tzinfo=timezone.utc)
+        db.add(r)
+    await db.commit()
+
+    response = await client.get("/api/recommendations/accuracy?date=2026-03-28")
+    data = response.json()
+    assert data["top_10_hits"] == 2
+    assert data["top_10_total"] == 3
+    assert abs(data["top_10_hit_rate"] - 2/3) < 0.01
+    assert data["settled"] == 3
+    assert data["total"] == 3
+
+
+async def test_accuracy_avg_edge_split(client, db):
+    game_date = date(2026, 3, 28)
+    # 2 hits with edge 0.10 and 0.08; 1 miss with edge 0.06
+    for i, (result, edge) in enumerate([(True, 0.10), (True, 0.08), (False, 0.06)], start=1):
+        r = _rec(f"Player {i}", "player_points", "DraftKings", i, game_date, edge=edge)
+        r.actual_result = result
+        r.actual_stat_value = Decimal("25.0")
+        from datetime import datetime, timezone
+        r.settled_at = datetime(2026, 3, 29, 12, 0, tzinfo=timezone.utc)
+        db.add(r)
+    await db.commit()
+
+    response = await client.get("/api/recommendations/accuracy?date=2026-03-28")
+    data = response.json()
+    assert abs(data["avg_edge_hits"] - 0.09) < 0.001    # (0.10 + 0.08) / 2
+    assert abs(data["avg_edge_misses"] - 0.06) < 0.001
+
+
+async def test_accuracy_excludes_ranks_above_10(client, db):
+    game_date = date(2026, 3, 28)
+    # Rank 1-10: mix of hits/misses; rank 11: hit that should NOT count
+    for i in range(1, 12):
+        r = _rec(f"Player {i}", "player_points", "DraftKings", i, game_date)
+        r.actual_result = True
+        r.actual_stat_value = Decimal("25.0")
+        from datetime import datetime, timezone
+        r.settled_at = datetime(2026, 3, 29, 12, 0, tzinfo=timezone.utc)
+        db.add(r)
+    await db.commit()
+
+    response = await client.get("/api/recommendations/accuracy?date=2026-03-28")
+    data = response.json()
+    assert data["top_10_total"] == 10
+    assert data["total"] == 11
+
+
+async def test_accuracy_defaults_to_today(client, db):
+    import datetime as dt
+    today = dt.date.today()
+    r = _rec("Today Player", "player_points", "DraftKings", 1, today)
+    r.actual_result = True
+    r.actual_stat_value = Decimal("25.0")
+    from datetime import datetime, timezone
+    r.settled_at = datetime.now(tz=timezone.utc)
+    db.add(r)
+    await db.commit()
+
+    response = await client.get("/api/recommendations/accuracy")
+    data = response.json()
+    assert data["top_10_hits"] == 1
