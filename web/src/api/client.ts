@@ -84,8 +84,8 @@ export interface PropRecommendationItem {
 
 const BASE = "/api";
 
-export async function fetchGames(): Promise<Game[]> {
-  const res = await fetch(`${BASE}/games`);
+export async function fetchGames(sport: Sport): Promise<Game[]> {
+  const res = await fetch(`${BASE}/games?sport=${sport}`);
   if (!res.ok) throw new Error("Failed to fetch games");
   return res.json();
 }
