@@ -248,3 +248,19 @@ async def test_list_players_defaults_to_nba(client, db):
     data = response.json()
     assert len(data) == 1
     assert data[0]["full_name"] == "LeBron James"
+
+
+async def test_get_player_mlb(client, db):
+    db.add(_mlb_player(660271, "Juan Soto", is_active=True, team_abbreviation="NYM", position="OF"))
+    await db.commit()
+
+    response = await client.get("/api/players/660271?sport=MLB")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["full_name"] == "Juan Soto"
+    assert data["team_abbreviation"] == "NYM"
+
+
+async def test_get_player_mlb_not_found(client):
+    response = await client.get("/api/players/9999?sport=MLB")
+    assert response.status_code == 404

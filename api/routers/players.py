@@ -48,11 +48,23 @@ async def list_players(
         return result.scalars().all()
 
 
-@router.get("/players/{player_id}", response_model=PlayerListItem)
-async def get_player(player_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Player).where(Player.player_id == player_id)
-    )
+@router.get(
+    "/players/{player_id}",
+    response_model=Union[PlayerListItem, MlbPlayerListItem],
+)
+async def get_player(
+    player_id: int,
+    sport: Sport = Depends(sport_dep),
+    db: AsyncSession = Depends(get_db),
+):
+    if sport == Sport.NBA:
+        result = await db.execute(
+            select(Player).where(Player.player_id == player_id)
+        )
+    else:
+        result = await db.execute(
+            select(MlbPlayer).where(MlbPlayer.player_id == player_id)
+        )
     player = result.scalar_one_or_none()
     if player is None:
         raise HTTPException(status_code=404, detail="Player not found")
