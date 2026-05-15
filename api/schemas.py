@@ -96,6 +96,7 @@ class PropRecommendationItem(_Base):
     rank: int | None
     model_version: str | None
     game_date:         date | None
+    sport:             str | None = None
     actual_result:     bool | None = None
     actual_stat_value: Decimal | None = None
     settled_at:        datetime | None = None

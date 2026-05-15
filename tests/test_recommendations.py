@@ -18,8 +18,9 @@ def _rec(
     line: float = 24.5,
     outcome: str = "Over",
     model_version: str = "v3",
+    sport: str = "NBA",
 ) -> PropRecommendation:
-    return PropRecommendation(
+    rec = PropRecommendation(
         player_name=player_name,
         prop_type=prop_type,
         bookmaker=bookmaker,
@@ -32,6 +33,8 @@ def _rec(
         model_version=model_version,
         game_date=game_date,
     )
+    rec.sport = sport
+    return rec
 
 
 # ── GET /api/recommendations ──────────────────────────────────────────────────
@@ -252,3 +255,16 @@ async def test_accuracy_defaults_to_today(client, db):
     response = await client.get("/api/recommendations/accuracy")
     data = response.json()
     assert data["top_10_hits"] == 1
+
+
+async def test_list_recommendations_response_includes_sport(client, db):
+    from datetime import date
+    today = date(2026, 3, 28)
+    rec = _rec("LeBron James", "player_points", "DraftKings", 1, today, edge=0.13)
+    rec.sport = "NBA"
+    db.add(rec)
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    assert data[0]["sport"] == "NBA"
