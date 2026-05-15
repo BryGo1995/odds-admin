@@ -296,3 +296,17 @@ async def test_list_recommendations_filters_by_sport_mlb(client, db):
     assert len(data) == 1
     assert data[0]["player_name"] == "Juan Soto"
     assert data[0]["sport"] == "MLB"
+
+
+async def test_top_recommendations_filters_by_sport(client, db):
+    from datetime import date
+    today = date(2026, 3, 28)
+    db.add(_rec("NBA1", "player_points", "DK", 1, today, edge=0.15, sport="NBA"))
+    db.add(_rec("NBA2", "player_points", "DK", 2, today, edge=0.12, sport="NBA"))
+    db.add(_rec("MLB1", "batter_hits",  "DK", 1, today, edge=0.10, sport="MLB"))
+    db.add(_rec("MLB2", "batter_hits",  "DK", 2, today, edge=0.08, sport="MLB"))
+    await db.commit()
+
+    response = await client.get("/api/recommendations/top?date=2026-03-28&sport=MLB&limit=5")
+    data = response.json()
+    assert {row["player_name"] for row in data} == {"MLB1", "MLB2"}

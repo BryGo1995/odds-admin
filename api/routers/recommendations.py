@@ -94,6 +94,7 @@ async def recommendations_accuracy(
 async def top_recommendations(
     date: str = Query(default=None),
     limit: int = Query(default=5, ge=1, le=20),
+    sport: Sport = Depends(sport_dep),
     db: AsyncSession = Depends(get_db),
 ):
     game_date = (
@@ -103,7 +104,10 @@ async def top_recommendations(
     )
     result = await db.execute(
         select(PropRecommendation)
-        .where(PropRecommendation.game_date == game_date)
+        .where(
+            PropRecommendation.game_date == game_date,
+            PropRecommendation.sport == sport.value,
+        )
         .order_by(PropRecommendation.rank)
         .limit(limit)
     )
