@@ -9,13 +9,18 @@ import {
 } from "@/api/client";
 import type {
   PlayerListItem,
+  MlbPlayerListItem,
   PlayerPropItem,
   PlayerGameLogItem,
+  MlbPlayerGameLogItem,
 } from "@/api/client";
+import { useSport } from "@/lib/sport";
+import { propTypeLabel } from "@/lib/propTypes";
+import { NbaStatsTable, type StatCategory } from "@/components/NbaStatsTable";
+import { MlbStatsTable } from "@/components/MlbStatsTable";
 
-type StatCategory = "all" | "pts" | "reb" | "ast";
-
-const SEASONS = ["2025-26", "2024-25", "2023-24"];
+const NBA_SEASONS = ["2025-26", "2024-25", "2023-24"];
+const MLB_SEASONS = ["2026", "2025", "2024"];
 const LAST_N_OPTIONS = [5, 10, 20] as const;
 
 const STAT_CATEGORY_LABELS: Record<StatCategory, string> = {
@@ -42,57 +47,66 @@ function formatPrice(price: number | null): string {
   return price > 0 ? `+${price}` : String(price);
 }
 
-function formatStat(val: number | null): string {
-  return val !== null ? String(val) : "—";
-}
-
-function formatMin(val: number | null): string {
-  if (val === null) return "—";
-  return val.toFixed(1);
-}
-
-function formatUsg(val: number | null): string {
-  if (val === null) return "—";
-  return `${(val * 100).toFixed(1)}%`;
-}
-
 export function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const playerId = Number(id);
+  const { sport } = useSport();
 
-  const [player, setPlayer] = useState<PlayerListItem | null>(null);
+  const [player, setPlayer] = useState<PlayerListItem | MlbPlayerListItem | null>(null);
   const [props, setProps] = useState<PlayerPropItem[]>([]);
-  const [gameLogs, setGameLogs] = useState<PlayerGameLogItem[]>([]);
+  const [nbaLogs, setNbaLogs] = useState<PlayerGameLogItem[]>([]);
+  const [mlbLogs, setMlbLogs] = useState<MlbPlayerGameLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [season, setSeason] = useState("2025-26");
+  const seasons = sport === "MLB" ? MLB_SEASONS : NBA_SEASONS;
+  const [season, setSeason] = useState(seasons[0]);
   const [lastN, setLastN] = useState<number | null>(null);
   const [statCategory, setStatCategory] = useState<StatCategory>("all");
 
-  // Fetch player and props when player ID changes
+  // Reset season + logs when sport changes (different season formats per sport)
   useEffect(() => {
+    setSeason(sport === "MLB" ? MLB_SEASONS[0] : NBA_SEASONS[0]);
+    setStatCategory("all");
+  }, [sport]);
+
+  // Fetch player + props on player or sport change
+  useEffect(() => {
+    let isCurrent = true;
     setLoading(true);
     setError(null);
     Promise.all([
-      fetchPlayer(playerId),
-      fetchPlayerProps(playerId),
+      fetchPlayer(playerId, sport),
+      fetchPlayerProps(playerId, sport),
     ])
       .then(([playerData, propsData]) => {
+        if (!isCurrent) return;
         setPlayer(playerData);
         setProps(propsData);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [playerId]);
+      .catch((e) => { if (isCurrent) setError(e.message); })
+      .finally(() => { if (isCurrent) setLoading(false); });
+    return () => { isCurrent = false; };
+  }, [playerId, sport]);
 
-  // Fetch game logs when player ID or season changes
+  // Fetch game logs on player, sport, or season change
   useEffect(() => {
-    fetchPlayerGameLogs(playerId, season)
-      .then(setGameLogs)
-      .catch((e) => setError(e.message));
-  }, [playerId, season]);
+    let isCurrent = true;
+    fetchPlayerGameLogs(playerId, sport, season)
+      .then((logs) => {
+        if (!isCurrent) return;
+        if (sport === "MLB") {
+          setMlbLogs(logs as MlbPlayerGameLogItem[]);
+          setNbaLogs([]);
+        } else {
+          setNbaLogs(logs as PlayerGameLogItem[]);
+          setMlbLogs([]);
+        }
+      })
+      .catch((e) => { if (isCurrent) setError(e.message); });
+    return () => { isCurrent = false; };
+  }, [playerId, sport, season]);
 
   if (loading) {
     return <p className="px-6 py-8 text-slate-500">Loading...</p>;
@@ -112,16 +126,16 @@ export function PlayerDetailPage() {
   }
 
   const propsByBookmaker = groupPropsByBookmaker(props);
-  const displayedLogs = lastN ? gameLogs.slice(0, lastN) : gameLogs;
 
-  const highlightCol = (col: StatCategory): string =>
-    statCategory !== "all" && statCategory === col
-      ? "bg-blue-950/40 text-blue-300 font-semibold"
-      : "";
+  // Apply lastN to whichever log array is active
+  const displayedNbaLogs = lastN ? nbaLogs.slice(0, lastN) : nbaLogs;
+  const displayedMlbLogs = lastN ? mlbLogs.slice(0, lastN) : mlbLogs;
+
+  const isMlb = sport === "MLB";
+  const mlbPlayer = isMlb ? (player as MlbPlayerListItem) : null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      {/* Back link */}
       <button
         onClick={() => navigate("/players")}
         className="text-sm text-slate-500 hover:text-slate-300 flex items-center gap-1 mb-4"
@@ -129,15 +143,18 @@ export function PlayerDetailPage() {
         <ChevronLeft className="w-4 h-4" /> Players
       </button>
 
-      {/* Player header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-100">{player.full_name}</h1>
         <p className="text-sm text-slate-500 mt-0.5">
           {player.position ?? "—"} · {player.team_abbreviation ?? "—"}
+          {mlbPlayer && (mlbPlayer.bats || mlbPlayer.throws) && (
+            <span className="ml-3 text-slate-600">
+              B/T: {mlbPlayer.bats ?? "—"}/{mlbPlayer.throws ?? "—"}
+            </span>
+          )}
         </p>
       </div>
 
-      {/* Bookmaker prop cards */}
       <section className="mb-8">
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 pb-2 mb-3 border-b border-slate-800">
           Lines by Bookmaker
@@ -171,7 +188,7 @@ export function PlayerDetailPage() {
                     {bkProps.map((p, i) => (
                       <tr key={i} className="border-t border-slate-800">
                         <td className="pr-3 py-1.5 text-violet-400 font-semibold">
-                          {p.prop_type?.replace("player_", "") ?? "—"}
+                          {propTypeLabel(p.prop_type)}
                         </td>
                         <td className="pr-3 py-1.5 text-blue-400 font-semibold">
                           {p.point ?? "—"}
@@ -182,7 +199,7 @@ export function PlayerDetailPage() {
                             "py-1.5 font-semibold",
                             p.price !== null && p.price > 0
                               ? "text-green-400"
-                              : "text-red-400"
+                              : "text-red-400",
                           )}
                         >
                           {formatPrice(p.price)}
@@ -197,17 +214,14 @@ export function PlayerDetailPage() {
         )}
       </section>
 
-      {/* Stats section */}
       <section>
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 pb-2 mb-3 border-b border-slate-800">
           Game Log
         </p>
 
-        {/* Filter bar */}
         <div className="flex flex-wrap gap-3 mb-4 items-center">
-          {/* Season selector */}
           <div className="flex gap-1">
-            {SEASONS.map((s) => (
+            {seasons.map((s) => (
               <button
                 key={s}
                 onClick={() => setSeason(s)}
@@ -215,7 +229,7 @@ export function PlayerDetailPage() {
                   "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
                   season === s
                     ? "bg-blue-950 text-blue-400"
-                    : "bg-slate-800 text-slate-500 hover:text-slate-400"
+                    : "bg-slate-800 text-slate-500 hover:text-slate-400",
                 )}
               >
                 {s}
@@ -223,10 +237,8 @@ export function PlayerDetailPage() {
             ))}
           </div>
 
-          {/* Divider */}
           <span className="text-slate-700 text-xs">|</span>
 
-          {/* Last N selector */}
           <div className="flex gap-1">
             <button
               onClick={() => setLastN(null)}
@@ -234,7 +246,7 @@ export function PlayerDetailPage() {
                 "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
                 lastN === null
                   ? "bg-blue-950 text-blue-400"
-                  : "bg-slate-800 text-slate-500 hover:text-slate-400"
+                  : "bg-slate-800 text-slate-500 hover:text-slate-400",
               )}
             >
               All
@@ -247,7 +259,7 @@ export function PlayerDetailPage() {
                   "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
                   lastN === n
                     ? "bg-blue-950 text-blue-400"
-                    : "bg-slate-800 text-slate-500 hover:text-slate-400"
+                    : "bg-slate-800 text-slate-500 hover:text-slate-400",
                 )}
               >
                 L{n}
@@ -255,103 +267,33 @@ export function PlayerDetailPage() {
             ))}
           </div>
 
-          {/* Divider */}
-          <span className="text-slate-700 text-xs">|</span>
-
-          {/* Stat category */}
-          <div className="flex gap-1">
-            {(["all", "pts", "reb", "ast"] as StatCategory[]).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setStatCategory(cat)}
-                className={cn(
-                  "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
-                  statCategory === cat
-                    ? "bg-blue-950 text-blue-400"
-                    : "bg-slate-800 text-slate-500 hover:text-slate-400"
-                )}
-              >
-                {STAT_CATEGORY_LABELS[cat]}
-              </button>
-            ))}
-          </div>
+          {!isMlb && (
+            <>
+              <span className="text-slate-700 text-xs">|</span>
+              <div className="flex gap-1">
+                {(["all", "pts", "reb", "ast"] as StatCategory[]).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setStatCategory(cat)}
+                    className={cn(
+                      "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
+                      statCategory === cat
+                        ? "bg-blue-950 text-blue-400"
+                        : "bg-slate-800 text-slate-500 hover:text-slate-400",
+                    )}
+                  >
+                    {STAT_CATEGORY_LABELS[cat]}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Stats table */}
-        {displayedLogs.length === 0 ? (
-          <p className="text-sm text-slate-500">No stats available for this season.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr>
-                  {[
-                    { label: "Date", col: null },
-                    { label: "Matchup", col: null },
-                    { label: "W/L", col: null },
-                    { label: "MIN", col: null },
-                    { label: "PTS", col: "pts" as StatCategory },
-                    { label: "REB", col: "reb" as StatCategory },
-                    { label: "AST", col: "ast" as StatCategory },
-                    { label: "BLK", col: null },
-                    { label: "STL", col: null },
-                    { label: "USG%", col: null },
-                    { label: "+/-", col: null },
-                  ].map(({ label, col }) => (
-                    <th
-                      key={label}
-                      className={cn(
-                        "text-left px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500",
-                        col && statCategory === col ? "text-blue-400" : ""
-                      )}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {displayedLogs.map((log, i) => (
-                  <tr key={i} className="border-t border-slate-800 hover:bg-slate-900/50">
-                    <td className="px-2 py-1.5 text-slate-400">{log.game_date}</td>
-                    <td className="px-2 py-1.5 text-slate-300">{log.matchup ?? "—"}</td>
-                    <td
-                      className={cn(
-                        "px-2 py-1.5 font-semibold",
-                        log.wl === "W" ? "text-green-400" : log.wl === "L" ? "text-red-400" : "text-slate-500"
-                      )}
-                    >
-                      {log.wl ?? "—"}
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-400">{formatMin(log.min)}</td>
-                    <td className={cn("px-2 py-1.5", highlightCol("pts"))}>{formatStat(log.pts)}</td>
-                    <td className={cn("px-2 py-1.5", highlightCol("reb"))}>{formatStat(log.reb)}</td>
-                    <td className={cn("px-2 py-1.5", highlightCol("ast"))}>{formatStat(log.ast)}</td>
-                    <td className="px-2 py-1.5 text-slate-400">{formatStat(log.blk)}</td>
-                    <td className="px-2 py-1.5 text-slate-400">{formatStat(log.stl)}</td>
-                    <td className="px-2 py-1.5 text-slate-400">{formatUsg(log.usg_pct)}</td>
-                    <td
-                      className={cn(
-                        "px-2 py-1.5 font-semibold",
-                        log.plus_minus !== null && log.plus_minus > 0
-                          ? "text-green-400"
-                          : log.plus_minus !== null && log.plus_minus < 0
-                          ? "text-red-400"
-                          : "text-slate-400"
-                      )}
-                    >
-                      {log.plus_minus !== null
-                        ? log.plus_minus > 0
-                          ? `+${log.plus_minus}`
-                          : String(log.plus_minus)
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {isMlb
+          ? <MlbStatsTable logs={displayedMlbLogs} />
+          : <NbaStatsTable logs={displayedNbaLogs} statCategory={statCategory} />
+        }
       </section>
     </div>
   );
