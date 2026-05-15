@@ -36,6 +36,7 @@ async def list_recommendations(
 @router.get("/recommendations/accuracy", response_model=AccuracySummaryItem)
 async def recommendations_accuracy(
     date: str = Query(default=None),
+    sport: Sport = Depends(sport_dep),
     db: AsyncSession = Depends(get_db),
 ):
     game_date = (
@@ -48,13 +49,20 @@ async def recommendations_accuracy(
         select(PropRecommendation)
         .where(
             PropRecommendation.game_date == game_date,
+            PropRecommendation.sport == sport.value,
             PropRecommendation.rank <= 10,
         )
     )
     top10_result = await db.execute(top10_q)
     top10_recs = top10_result.scalars().all()
 
-    all_q = select(func.count()).where(PropRecommendation.game_date == game_date)
+    all_q = (
+        select(func.count())
+        .where(
+            PropRecommendation.game_date == game_date,
+            PropRecommendation.sport == sport.value,
+        )
+    )
     total = (await db.execute(all_q)).scalar_one()
 
     settled_top10 = [r for r in top10_recs if r.actual_result is not None]
@@ -73,6 +81,7 @@ async def recommendations_accuracy(
         select(func.count())
         .where(
             PropRecommendation.game_date == game_date,
+            PropRecommendation.sport == sport.value,
             PropRecommendation.settled_at.isnot(None),
         )
     )

@@ -310,3 +310,29 @@ async def test_top_recommendations_filters_by_sport(client, db):
     response = await client.get("/api/recommendations/top?date=2026-03-28&sport=MLB&limit=5")
     data = response.json()
     assert {row["player_name"] for row in data} == {"MLB1", "MLB2"}
+
+
+async def test_accuracy_filters_by_sport(client, db):
+    from datetime import date
+    today = date(2026, 3, 28)
+    # 2 NBA top-10 settled, both hits
+    db.add(_rec("NBA1", "player_points", "DK", 1, today, sport="NBA"))
+    db.add(_rec("NBA2", "player_points", "DK", 2, today, sport="NBA"))
+    # 2 MLB top-10 settled, one hit one miss
+    db.add(_rec("MLB1", "batter_hits",   "DK", 1, today, sport="MLB"))
+    db.add(_rec("MLB2", "batter_hits",   "DK", 2, today, sport="MLB"))
+    await db.flush()
+    # Mark each row's actual_result manually
+    from api.models import PropRecommendation
+    from sqlalchemy import update
+    await db.execute(update(PropRecommendation).where(PropRecommendation.player_name == "NBA1").values(actual_result=True))
+    await db.execute(update(PropRecommendation).where(PropRecommendation.player_name == "NBA2").values(actual_result=True))
+    await db.execute(update(PropRecommendation).where(PropRecommendation.player_name == "MLB1").values(actual_result=True))
+    await db.execute(update(PropRecommendation).where(PropRecommendation.player_name == "MLB2").values(actual_result=False))
+    await db.commit()
+
+    response = await client.get("/api/recommendations/accuracy?date=2026-03-28&sport=MLB")
+    data = response.json()
+    assert data["top_10_total"] == 2
+    assert data["top_10_hits"] == 1  # only the MLB hit, not NBA's
+    assert data["total"] == 2        # only MLB rows count
