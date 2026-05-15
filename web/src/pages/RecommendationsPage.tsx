@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchRecommendations, fetchTopRecommendations } from "@/api/client";
 import type { PropRecommendationItem } from "@/api/client";
+import { useSport } from "@/lib/sport";
+import { propTypeLabel } from "@/lib/propTypes";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ function TopPicksModule({
                   {pick.player_name ?? "—"}
                 </p>
                 <p className="text-xs text-violet-400">
-                  {pick.prop_type?.replace("player_", "") ?? "—"}
+                  {propTypeLabel(pick.prop_type)}
                 </p>
                 <p className="text-xs text-blue-400 font-semibold">
                   {pick.outcome} {pick.line ?? "—"}
@@ -166,7 +168,7 @@ function RecommendationsTable({
         >
           {propTypes.map((t) => (
             <option key={t} value={t}>
-              {t === "all" ? "All Prop Types" : t.replace("player_", "")}
+              {t === "all" ? "All Prop Types" : propTypeLabel(t)}
             </option>
           ))}
         </select>
@@ -210,7 +212,7 @@ function RecommendationsTable({
                 <tr key={row.id} className="border-t border-slate-800 hover:bg-slate-900/50">
                   <td className="px-2 py-1.5 text-slate-400">{row.rank ?? "—"}</td>
                   <td className="px-2 py-1.5 text-slate-100 font-medium whitespace-nowrap">{row.player_name ?? "—"}</td>
-                  <td className="px-2 py-1.5 text-violet-400">{row.prop_type?.replace("player_", "") ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-violet-400">{propTypeLabel(row.prop_type)}</td>
                   <td className="px-2 py-1.5 text-blue-400 font-semibold">{row.line ?? "—"}</td>
                   <td className="px-2 py-1.5 text-slate-400">{row.outcome ?? "—"}</td>
                   <td className="px-2 py-1.5 text-slate-300">{row.bookmaker ?? "—"}</td>
@@ -232,6 +234,7 @@ function RecommendationsTable({
 
 export function RecommendationsPage() {
   const today = toDateString(new Date());
+  const { sport } = useSport();
   const [date, setDate] = useState(today);
   const [topPicks, setTopPicks] = useState<PropRecommendationItem[]>([]);
   const [allRecs, setAllRecs] = useState<PropRecommendationItem[]>([]);
@@ -243,8 +246,8 @@ export function RecommendationsPage() {
     setLoading(true);
     setError(null);
     Promise.all([
-      fetchTopRecommendations(date),
-      fetchRecommendations(date),
+      fetchTopRecommendations(date, sport),
+      fetchRecommendations(date, sport),
     ])
       .then(([top, all]) => {
         if (!isCurrent) return;
@@ -254,7 +257,7 @@ export function RecommendationsPage() {
       .catch((e) => { if (isCurrent) setError(e.message); })
       .finally(() => { if (isCurrent) setLoading(false); });
     return () => { isCurrent = false; };
-  }, [date]);
+  }, [date, sport]);
 
   function prevDay() {
     const d = new Date(date + "T00:00:00");
