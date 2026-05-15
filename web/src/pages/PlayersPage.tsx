@@ -1,24 +1,36 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchPlayers } from "@/api/client";
-import type { PlayerListItem } from "@/api/client";
+import type { PlayerListItem, MlbPlayerListItem } from "@/api/client";
+import { useSport } from "@/lib/sport";
+
+type AnyPlayer = PlayerListItem | MlbPlayerListItem;
+
+function isMlbPlayer(p: AnyPlayer): p is MlbPlayerListItem {
+  return "bats" in p;
+}
 
 export function PlayersPage() {
-  const [players, setPlayers] = useState<PlayerListItem[]>([]);
+  const { sport } = useSport();
+  const [players, setPlayers] = useState<AnyPlayer[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchPlayers()
-      .then(setPlayers)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    let isCurrent = true;
+    setLoading(true);
+    setError(null);
+    fetchPlayers(sport)
+      .then((data) => { if (isCurrent) setPlayers(data); })
+      .catch((e) => { if (isCurrent) setError(e.message); })
+      .finally(() => { if (isCurrent) setLoading(false); });
+    return () => { isCurrent = false; };
+  }, [sport]);
 
   const filtered = players.filter((p) =>
-    p.full_name.toLowerCase().includes(search.toLowerCase())
+    p.full_name.toLowerCase().includes(search.toLowerCase()),
   );
 
   if (loading) {
@@ -52,6 +64,11 @@ export function PlayersPage() {
                 <p className="text-sm font-medium text-slate-100">{player.full_name}</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   {player.position ?? "—"} · {player.team_abbreviation ?? "—"}
+                  {isMlbPlayer(player) && (player.bats || player.throws) && (
+                    <span className="ml-2 text-slate-600">
+                      · B/T {player.bats ?? "—"}/{player.throws ?? "—"}
+                    </span>
+                  )}
                 </p>
               </div>
             </button>
