@@ -1,28 +1,51 @@
+from typing import Union
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, exists, and_, func
 
 from api.database import get_db
-from api.models import Player, PlayerGameLog, PlayerProp
-from api.schemas import PlayerListItem, PlayerGameLogItem, PlayerPropItem
+from api.models import Player, PlayerGameLog, PlayerProp, MlbPlayer, MlbPlayerGameLog
+from api.schemas import (
+    PlayerListItem,
+    PlayerGameLogItem,
+    PlayerPropItem,
+    MlbPlayerListItem,
+    MlbPlayerGameLogItem,
+)
+from api.sport import Sport, sport_dep
 
 router = APIRouter()
 
 
-@router.get("/players", response_model=list[PlayerListItem])
-async def list_players(db: AsyncSession = Depends(get_db)):
-    current_season_log = select(PlayerGameLog.id).where(
-        and_(
-            PlayerGameLog.player_id == Player.player_id,
-            PlayerGameLog.season == "2025-26",
+@router.get(
+    "/players",
+    response_model=Union[list[PlayerListItem], list[MlbPlayerListItem]],
+)
+async def list_players(
+    sport: Sport = Depends(sport_dep),
+    db: AsyncSession = Depends(get_db),
+):
+    if sport == Sport.NBA:
+        current_season_log = select(PlayerGameLog.id).where(
+            and_(
+                PlayerGameLog.player_id == Player.player_id,
+                PlayerGameLog.season == "2025-26",
+            )
         )
-    )
-    result = await db.execute(
-        select(Player)
-        .where(or_(Player.is_active == True, exists(current_season_log)))
-        .order_by(Player.full_name)
-    )
-    return result.scalars().all()
+        result = await db.execute(
+            select(Player)
+            .where(or_(Player.is_active == True, exists(current_season_log)))
+            .order_by(Player.full_name)
+        )
+        return result.scalars().all()
+    else:
+        result = await db.execute(
+            select(MlbPlayer)
+            .where(MlbPlayer.is_active == True)
+            .order_by(MlbPlayer.full_name)
+        )
+        return result.scalars().all()
 
 
 @router.get("/players/{player_id}", response_model=PlayerListItem)

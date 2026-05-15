@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from api.models import Player, PlayerProp, PlayerGameLog
+from api.models import Player, PlayerProp, PlayerGameLog, MlbPlayer, MlbPlayerGameLog
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -10,6 +10,16 @@ def _player(player_id: int, full_name: str, is_active: bool, **kwargs) -> Player
         full_name=full_name,
         is_active=is_active,
         fetched_at=datetime(2026, 3, 25, 6, 0),
+        **kwargs,
+    )
+
+
+def _mlb_player(player_id: int, full_name: str, is_active: bool, **kwargs) -> MlbPlayer:
+    return MlbPlayer(
+        player_id=player_id,
+        full_name=full_name,
+        is_active=is_active,
+        fetched_at=datetime(2026, 5, 14, 6, 0),
         **kwargs,
     )
 
@@ -213,3 +223,28 @@ async def test_get_player_game_logs_ordered_by_date_desc(client, db):
     data = response.json()
     dates = [r["game_date"] for r in data]
     assert dates == ["2026-03-20", "2026-03-15", "2026-03-10"]
+
+
+# ── GET /api/players?sport=MLB ────────────────────────────────────────────────
+
+async def test_list_players_returns_mlb_players_when_sport_mlb(client, db):
+    db.add(_player(1, "LeBron James", is_active=True, team_abbreviation="LAL"))
+    db.add(_mlb_player(660271, "Juan Soto", is_active=True, team_abbreviation="NYM"))
+    await db.commit()
+
+    response = await client.get("/api/players?sport=MLB")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["full_name"] == "Juan Soto"
+    assert data[0]["player_id"] == 660271
+
+
+async def test_list_players_defaults_to_nba(client, db):
+    db.add(_player(1, "LeBron James", is_active=True))
+    db.add(_mlb_player(660271, "Juan Soto", is_active=True))
+    await db.commit()
+
+    response = await client.get("/api/players")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["full_name"] == "LeBron James"
