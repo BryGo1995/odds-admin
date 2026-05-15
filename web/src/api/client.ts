@@ -66,6 +66,35 @@ export interface PlayerGameLogItem {
   plus_minus: number | null;
 }
 
+export interface MlbPlayerListItem {
+  player_id: number;
+  full_name: string;
+  position: string | null;
+  bats: string | null;
+  throws: string | null;
+  team_id: number | null;
+  team_abbreviation: string | null;
+  is_active: boolean | null;
+}
+
+export interface MlbPlayerGameLogItem {
+  game_date: string;
+  matchup: string | null;
+  season: string;
+  plate_appearances: number | null;
+  at_bats: number | null;
+  hits: number | null;
+  doubles: number | null;
+  triples: number | null;
+  home_runs: number | null;
+  rbi: number | null;
+  runs: number | null;
+  walks: number | null;
+  strikeouts: number | null;
+  stolen_bases: number | null;
+  total_bases: number | null;
+}
+
 export interface PropRecommendationItem {
   id: number;
   player_name: string | null;
@@ -109,29 +138,40 @@ export async function fetchScore(gameId: string): Promise<ScoreItem | null> {
   return res.json();
 }
 
-export async function fetchPlayers(): Promise<PlayerListItem[]> {
-  const res = await fetch(`${BASE}/players`);
+export async function fetchPlayers(
+  sport: Sport,
+): Promise<PlayerListItem[] | MlbPlayerListItem[]> {
+  const res = await fetch(`${BASE}/players?sport=${sport}`);
   if (!res.ok) throw new Error("Failed to fetch players");
   return res.json();
 }
 
-export async function fetchPlayer(playerId: number): Promise<PlayerListItem> {
-  const res = await fetch(`${BASE}/players/${playerId}`);
+export async function fetchPlayer(
+  playerId: number,
+  sport: Sport,
+): Promise<PlayerListItem | MlbPlayerListItem> {
+  const res = await fetch(`${BASE}/players/${playerId}?sport=${sport}`);
   if (!res.ok) throw new Error("Player not found");
   return res.json();
 }
 
-export async function fetchPlayerProps(playerId: number): Promise<PlayerPropItem[]> {
-  const res = await fetch(`${BASE}/players/${playerId}/props`);
+export async function fetchPlayerProps(
+  playerId: number,
+  sport: Sport,
+): Promise<PlayerPropItem[]> {
+  const res = await fetch(`${BASE}/players/${playerId}/props?sport=${sport}`);
   if (!res.ok) throw new Error("Failed to fetch player props");
   return res.json();
 }
 
 export async function fetchPlayerGameLogs(
   playerId: number,
-  season = "2025-26"
-): Promise<PlayerGameLogItem[]> {
-  const res = await fetch(`${BASE}/players/${playerId}/game-logs?season=${season}`);
+  sport: Sport,
+  season = "2025-26",
+): Promise<PlayerGameLogItem[] | MlbPlayerGameLogItem[]> {
+  const res = await fetch(
+    `${BASE}/players/${playerId}/game-logs?sport=${sport}&season=${season}`,
+  );
   if (!res.ok) throw new Error("Failed to fetch player game logs");
   return res.json();
 }
