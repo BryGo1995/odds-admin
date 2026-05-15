@@ -106,20 +106,36 @@ async def get_player_props(
     return result.scalars().all()
 
 
-@router.get("/players/{player_id}/game-logs", response_model=list[PlayerGameLogItem])
+@router.get(
+    "/players/{player_id}/game-logs",
+    response_model=Union[list[PlayerGameLogItem], list[MlbPlayerGameLogItem]],
+)
 async def get_player_game_logs(
     player_id: int,
     season: str = "2025-26",
+    sport: Sport = Depends(sport_dep),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(PlayerGameLog)
-        .where(
-            and_(
-                PlayerGameLog.player_id == player_id,
-                PlayerGameLog.season == season,
+    if sport == Sport.NBA:
+        result = await db.execute(
+            select(PlayerGameLog)
+            .where(
+                and_(
+                    PlayerGameLog.player_id == player_id,
+                    PlayerGameLog.season == season,
+                )
             )
+            .order_by(PlayerGameLog.game_date.desc())
         )
-        .order_by(PlayerGameLog.game_date.desc())
-    )
+    else:
+        result = await db.execute(
+            select(MlbPlayerGameLog)
+            .where(
+                and_(
+                    MlbPlayerGameLog.player_id == player_id,
+                    MlbPlayerGameLog.season == season,
+                )
+            )
+            .order_by(MlbPlayerGameLog.game_date.desc())
+        )
     return result.scalars().all()

@@ -46,6 +46,29 @@ def _game_log(player_id: int, season: str, game_date: date) -> PlayerGameLog:
     )
 
 
+def _mlb_game_log(player_id: int, season: str, game_date: date) -> MlbPlayerGameLog:
+    return MlbPlayerGameLog(
+        player_id=player_id,
+        mlb_game_pk=f"mlb_{player_id}_{game_date}",
+        season=season,
+        game_date=game_date,
+        matchup="NYM @ ATL",
+        plate_appearances=4,
+        at_bats=3,
+        hits=2,
+        doubles=1,
+        triples=0,
+        home_runs=0,
+        rbi=1,
+        runs=1,
+        walks=1,
+        strikeouts=0,
+        stolen_bases=0,
+        total_bases=3,
+        fetched_at=datetime(2026, 5, 14, 6, 0),
+    )
+
+
 def _prop(player_id: int, bookmaker: str, prop_type: str, outcome: str,
           point: float, price: float, fetched_at: datetime) -> PlayerProp:
     return PlayerProp(
@@ -295,3 +318,18 @@ async def test_get_player_props_mlb(client, db):
     assert len(data) == 2
     prop_types = {r["prop_type"] for r in data}
     assert prop_types == {"batter_hits", "batter_total_bases"}
+
+
+async def test_get_player_game_logs_mlb(client, db):
+    db.add(_mlb_player(660271, "Juan Soto", is_active=True))
+    await db.flush()
+    db.add(_mlb_game_log(660271, "2026", date(2026, 5, 14)))
+    db.add(_mlb_game_log(660271, "2026", date(2026, 5, 13)))
+    await db.commit()
+
+    response = await client.get("/api/players/660271/game-logs?sport=MLB&season=2026")
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["game_date"] == "2026-05-14"  # ordered desc
+    assert data[0]["hits"] == 2
+    assert data[0]["total_bases"] == 3
