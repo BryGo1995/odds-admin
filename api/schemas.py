@@ -111,3 +111,32 @@ class AccuracySummaryItem(_Base):
     avg_edge_misses: float | None
     settled:         int
     total:           int
+
+
+class MlbPlayerListItem(_Base):
+    player_id: int
+    full_name: str
+    position: str | None
+    bats: str | None
+    throws: str | None
+    team_id: int | None
+    team_abbreviation: str | None
+    is_active: bool | None
+
+
+class MlbPlayerGameLogItem(_Base):
+    game_date: date
+    matchup: str | None
+    season: str
+    plate_appearances: int | None
+    at_bats: int | None
+    hits: int | None
+    doubles: int | None
+    triples: int | None
+    home_runs: int | None
+    rbi: int | None
+    runs: int | None
+    walks: int | None
+    strikeouts: int | None
+    stolen_bases: int | None
+    total_bases: int | None
