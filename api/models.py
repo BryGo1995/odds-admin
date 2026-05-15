@@ -66,6 +66,9 @@ class PlayerProp(Base):
     nba_player_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("players.player_id")
     )
+    mlb_player_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("mlb_players.player_id")
+    )
 
 
 class Score(Base):
@@ -106,6 +109,48 @@ class PlayerGameLog(Base):
     stl: Mapped[int | None] = mapped_column(Integer)
     plus_minus: Mapped[int | None] = mapped_column(Integer)
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class MlbPlayer(Base):
+    __tablename__ = "mlb_players"
+
+    player_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    full_name: Mapped[str] = mapped_column(String)
+    position: Mapped[str | None] = mapped_column(String)
+    bats: Mapped[str | None] = mapped_column(String)
+    throws: Mapped[str | None] = mapped_column(String)
+    team_id: Mapped[int | None] = mapped_column(Integer)
+    team_abbreviation: Mapped[str | None] = mapped_column(String)
+    is_active: Mapped[bool | None] = mapped_column(Boolean)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MlbPlayerGameLog(Base):
+    __tablename__ = "mlb_player_game_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("mlb_players.player_id")
+    )
+    mlb_game_pk: Mapped[str] = mapped_column(String)
+    season: Mapped[str] = mapped_column(String)
+    game_date: Mapped[date] = mapped_column(Date)
+    matchup: Mapped[str | None] = mapped_column(String)
+    team_id: Mapped[int | None] = mapped_column(Integer)
+    opponent_team_id: Mapped[int | None] = mapped_column(Integer)
+    plate_appearances: Mapped[int | None] = mapped_column(Integer)
+    at_bats: Mapped[int | None] = mapped_column(Integer)
+    hits: Mapped[int | None] = mapped_column(Integer)
+    doubles: Mapped[int | None] = mapped_column(Integer)
+    triples: Mapped[int | None] = mapped_column(Integer)
+    home_runs: Mapped[int | None] = mapped_column(Integer)
+    rbi: Mapped[int | None] = mapped_column(Integer)
+    runs: Mapped[int | None] = mapped_column(Integer)
+    walks: Mapped[int | None] = mapped_column(Integer)
+    strikeouts: Mapped[int | None] = mapped_column(Integer)
+    stolen_bases: Mapped[int | None] = mapped_column(Integer)
+    total_bases: Mapped[int | None] = mapped_column(Integer)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class PropRecommendation(Base):

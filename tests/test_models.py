@@ -14,3 +14,18 @@ def test_game_has_score_relationship():
 
 def test_score_has_game_relationship():
     assert hasattr(Score, "game")
+
+
+def test_mlb_player_model():
+    from api.models import MlbPlayer
+    assert MlbPlayer.__tablename__ == "mlb_players"
+
+
+def test_mlb_player_game_log_model():
+    from api.models import MlbPlayerGameLog
+    assert MlbPlayerGameLog.__tablename__ == "mlb_player_game_logs"
+
+
+def test_player_prop_has_mlb_player_id():
+    from api.models import PlayerProp
+    assert hasattr(PlayerProp, "mlb_player_id")
