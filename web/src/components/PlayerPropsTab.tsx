@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { propTypeLabel } from "@/lib/propTypes";
 import { useSport } from "@/lib/sport";
@@ -31,7 +31,7 @@ export function PlayerPropsTab({ props }: PlayerPropsTabProps) {
   const [filter, setFilter] = useState<string>("all");
 
   // Reset filter when sport changes so we don't keep an invalid prop_type selected
-  useMemo(() => setFilter("all"), [sport]);
+  useEffect(() => setFilter("all"), [sport]);
 
   const filtered =
     filter === "all" ? props : props.filter((p) => p.prop_type === filter);
