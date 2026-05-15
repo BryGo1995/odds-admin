@@ -6,14 +6,20 @@ from sqlalchemy.orm import selectinload
 from api.database import get_db
 from api.models import Game
 from api.schemas import GameListItem, ScoreEmbed
+from api.sport import Sport, sport_dep, GAMES_SPORT_TO_LONG
 
 router = APIRouter()
 
 
 @router.get("/games", response_model=list[GameListItem])
-async def list_games(db: AsyncSession = Depends(get_db)):
+async def list_games(
+    sport: Sport = Depends(sport_dep),
+    db: AsyncSession = Depends(get_db),
+):
+    long_sport = GAMES_SPORT_TO_LONG[sport]
     result = await db.execute(
         select(Game)
+        .where(Game.sport == long_sport)
         .options(selectinload(Game.score))
         .order_by(Game.commence_time.desc())
     )
