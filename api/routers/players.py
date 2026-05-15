@@ -72,7 +72,12 @@ async def get_player(
 
 
 @router.get("/players/{player_id}/props", response_model=list[PlayerPropItem])
-async def get_player_props(player_id: int, db: AsyncSession = Depends(get_db)):
+async def get_player_props(
+    player_id: int,
+    sport: Sport = Depends(sport_dep),
+    db: AsyncSession = Depends(get_db),
+):
+    join_col = PlayerProp.nba_player_id if sport == Sport.NBA else PlayerProp.mlb_player_id
     subq = (
         select(
             PlayerProp.bookmaker,
@@ -80,7 +85,7 @@ async def get_player_props(player_id: int, db: AsyncSession = Depends(get_db)):
             PlayerProp.outcome,
             func.max(PlayerProp.fetched_at).label("max_fetched_at"),
         )
-        .where(PlayerProp.nba_player_id == player_id)
+        .where(join_col == player_id)
         .group_by(PlayerProp.bookmaker, PlayerProp.prop_type, PlayerProp.outcome)
         .subquery()
     )
@@ -95,7 +100,7 @@ async def get_player_props(player_id: int, db: AsyncSession = Depends(get_db)):
                 PlayerProp.fetched_at == subq.c.max_fetched_at,
             ),
         )
-        .where(PlayerProp.nba_player_id == player_id)
+        .where(join_col == player_id)
         .order_by(PlayerProp.bookmaker, PlayerProp.prop_type, PlayerProp.outcome)
     )
     return result.scalars().all()

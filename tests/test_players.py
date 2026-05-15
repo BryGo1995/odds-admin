@@ -61,6 +61,21 @@ def _prop(player_id: int, bookmaker: str, prop_type: str, outcome: str,
     )
 
 
+def _mlb_prop(player_id: int, bookmaker: str, prop_type: str, outcome: str,
+              point: float, price: float, fetched_at: datetime) -> PlayerProp:
+    return PlayerProp(
+        game_id="g1",
+        bookmaker=bookmaker,
+        player_name="Test Batter",
+        prop_type=prop_type,
+        outcome=outcome,
+        price=price,
+        point=point,
+        mlb_player_id=player_id,
+        fetched_at=fetched_at,
+    )
+
+
 # ── GET /api/players ──────────────────────────────────────────────────────────
 
 async def test_list_players_empty(client):
@@ -264,3 +279,19 @@ async def test_get_player_mlb(client, db):
 async def test_get_player_mlb_not_found(client):
     response = await client.get("/api/players/9999?sport=MLB")
     assert response.status_code == 404
+
+
+async def test_get_player_props_mlb(client, db):
+    db.add(_mlb_player(660271, "Juan Soto", is_active=True))
+    await db.flush()
+    db.add(_mlb_prop(660271, "DraftKings", "batter_hits", "Over", 0.5, -130,
+                      datetime(2026, 5, 14, 10, 0)))
+    db.add(_mlb_prop(660271, "DraftKings", "batter_total_bases", "Over", 1.5, -110,
+                      datetime(2026, 5, 14, 10, 0)))
+    await db.commit()
+
+    response = await client.get("/api/players/660271/props?sport=MLB")
+    data = response.json()
+    assert len(data) == 2
+    prop_types = {r["prop_type"] for r in data}
+    assert prop_types == {"batter_hits", "batter_total_bases"}
