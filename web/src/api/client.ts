@@ -1,3 +1,5 @@
+import type { Sport } from "@/lib/sport";
+
 export interface ScoreEmbed {
   home_score: number | null;
   away_score: number | null;
@@ -77,6 +79,7 @@ export interface PropRecommendationItem {
   rank: number | null;
   model_version: string | null;
   game_date: string | null;
+  sport: string | null;
 }
 
 const BASE = "/api";
@@ -133,14 +136,23 @@ export async function fetchPlayerGameLogs(
   return res.json();
 }
 
-export async function fetchRecommendations(date: string): Promise<PropRecommendationItem[]> {
-  const res = await fetch(`${BASE}/recommendations?date=${date}`);
+export async function fetchRecommendations(
+  date: string,
+  sport: Sport,
+): Promise<PropRecommendationItem[]> {
+  const res = await fetch(`${BASE}/recommendations?date=${date}&sport=${sport}`);
   if (!res.ok) throw new Error("Failed to fetch recommendations");
   return res.json();
 }
 
-export async function fetchTopRecommendations(date: string, limit = 5): Promise<PropRecommendationItem[]> {
-  const res = await fetch(`${BASE}/recommendations/top?date=${date}&limit=${limit}`);
+export async function fetchTopRecommendations(
+  date: string,
+  sport: Sport,
+  limit = 5,
+): Promise<PropRecommendationItem[]> {
+  const res = await fetch(
+    `${BASE}/recommendations/top?date=${date}&sport=${sport}&limit=${limit}`
+  );
   if (!res.ok) throw new Error("Failed to fetch top recommendations");
   return res.json();
 }
