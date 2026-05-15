@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 from api.database import get_db
 from api.models import PropRecommendation
 from api.schemas import PropRecommendationItem, AccuracySummaryItem
+from api.sport import Sport, sport_dep
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ router = APIRouter()
 @router.get("/recommendations", response_model=list[PropRecommendationItem])
 async def list_recommendations(
     date: str = Query(default=None),
+    sport: Sport = Depends(sport_dep),
     db: AsyncSession = Depends(get_db),
 ):
     game_date = (
@@ -22,7 +24,10 @@ async def list_recommendations(
     )
     result = await db.execute(
         select(PropRecommendation)
-        .where(PropRecommendation.game_date == game_date)
+        .where(
+            PropRecommendation.game_date == game_date,
+            PropRecommendation.sport == sport.value,
+        )
         .order_by(PropRecommendation.rank)
     )
     return result.scalars().all()

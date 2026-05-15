@@ -268,3 +268,31 @@ async def test_list_recommendations_response_includes_sport(client, db):
     response = await client.get("/api/recommendations?date=2026-03-28")
     data = response.json()
     assert data[0]["sport"] == "NBA"
+
+
+async def test_list_recommendations_defaults_to_nba(client, db):
+    from datetime import date
+    today = date(2026, 3, 28)
+    db.add(_rec("LeBron James", "player_points", "DraftKings", 1, today, sport="NBA"))
+    db.add(_rec("Juan Soto", "batter_hits", "DraftKings", 1, today, sport="MLB"))
+    await db.commit()
+
+    # No ?sport= → defaults to NBA
+    response = await client.get("/api/recommendations?date=2026-03-28")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["player_name"] == "LeBron James"
+
+
+async def test_list_recommendations_filters_by_sport_mlb(client, db):
+    from datetime import date
+    today = date(2026, 3, 28)
+    db.add(_rec("LeBron James", "player_points", "DraftKings", 1, today, sport="NBA"))
+    db.add(_rec("Juan Soto", "batter_hits", "DraftKings", 1, today, sport="MLB"))
+    await db.commit()
+
+    response = await client.get("/api/recommendations?date=2026-03-28&sport=MLB")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["player_name"] == "Juan Soto"
+    assert data[0]["sport"] == "MLB"

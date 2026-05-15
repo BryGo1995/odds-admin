@@ -123,6 +123,7 @@ class PropRecommendation(Base):
     rank: Mapped[int | None] = mapped_column(Integer)
     model_version: Mapped[str | None] = mapped_column(String(50))
     game_date:         Mapped[date | None]     = mapped_column(Date)
+    sport:             Mapped[str | None]      = mapped_column(String(20))
     actual_result:     Mapped[bool | None]     = mapped_column(Boolean)
     actual_stat_value: Mapped[Decimal | None]  = mapped_column(Numeric(10, 2))
     settled_at:        Mapped[datetime | None]  = mapped_column(DateTime(timezone=True))
