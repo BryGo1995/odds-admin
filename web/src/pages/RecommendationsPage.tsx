@@ -8,8 +8,12 @@ import { propTypeLabel } from "@/lib/propTypes";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+// Local calendar date (YYYY-MM-DD). toISOString() is UTC, which rolls over to
+// tomorrow in the evening in US timezones and shows an empty slate.
 function toDateString(d: Date): string {
-  return d.toISOString().split("T")[0];
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 function formatPct(val: number | null): string {
