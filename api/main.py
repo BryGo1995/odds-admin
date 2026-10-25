@@ -2,7 +2,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import games, odds, props, scores
+from api.routers import games, odds, props, scores, players, recommendations
 
 app = FastAPI(title="Odds Admin")
 
@@ -11,6 +11,8 @@ app.include_router(games.router, prefix="/api")
 app.include_router(odds.router, prefix="/api")
 app.include_router(props.router, prefix="/api")
 app.include_router(scores.router, prefix="/api")
+app.include_router(players.router, prefix="/api")
+app.include_router(recommendations.router, prefix="/api")
 
 # Serve React SPA for all non-API routes (only when static dir is present)
 static_dir = Path(__file__).parent.parent / "static"

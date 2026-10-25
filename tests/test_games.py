@@ -74,3 +74,53 @@ async def test_list_games_ordered_by_commence_time_desc(client, db):
     data = response.json()
     assert data[0]["game_id"] == "late"
     assert data[1]["game_id"] == "early"
+
+
+async def test_list_games_filters_by_sport_mlb(client, db):
+    db.add(Game(
+        game_id="nba_g1",
+        home_team="Lakers",
+        away_team="Celtics",
+        commence_time=datetime(2026, 3, 19, 19, 0),
+        season="2025-26",
+        sport="basketball_nba",
+    ))
+    db.add(Game(
+        game_id="mlb_g1",
+        home_team="Yankees",
+        away_team="Red Sox",
+        commence_time=datetime(2026, 5, 14, 19, 0),
+        season="2026",
+        sport="baseball_mlb",
+    ))
+    await db.commit()
+
+    response = await client.get("/api/games?sport=MLB")
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["game_id"] == "mlb_g1"
+
+
+async def test_list_games_defaults_to_nba(client, db):
+    db.add(Game(
+        game_id="nba_g1",
+        home_team="Lakers",
+        away_team="Celtics",
+        commence_time=datetime(2026, 3, 19, 19, 0),
+        season="2025-26",
+        sport="basketball_nba",
+    ))
+    db.add(Game(
+        game_id="mlb_g1",
+        home_team="Yankees",
+        away_team="Red Sox",
+        commence_time=datetime(2026, 5, 14, 19, 0),
+        season="2026",
+        sport="baseball_mlb",
+    ))
+    await db.commit()
+
+    response = await client.get("/api/games")  # no sport param
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["game_id"] == "nba_g1"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchGames } from "@/api/client";
 import { GameCard } from "@/components/GameCard";
 import type { Game } from "@/api/client";
+import { useSport } from "@/lib/sport";
 
 function toLocalDateString(isoString: string): string {
   return new Date(isoString).toLocaleDateString("en-US", {
@@ -35,16 +36,21 @@ function getRelativeLabel(dateLabel: string): string {
 }
 
 export function GamesPage() {
+  const { sport } = useSport();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchGames()
-      .then(setGames)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    let isCurrent = true;
+    setLoading(true);
+    setError(null);
+    fetchGames(sport)
+      .then((data) => { if (isCurrent) setGames(data); })
+      .catch((e) => { if (isCurrent) setError(e.message); })
+      .finally(() => { if (isCurrent) setLoading(false); });
+    return () => { isCurrent = false; };
+  }, [sport]);
 
   if (loading) {
     return <p className="px-6 py-8 text-slate-500">Loading games...</p>;

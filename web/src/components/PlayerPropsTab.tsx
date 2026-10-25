@@ -1,15 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { propTypeLabel } from "@/lib/propTypes";
+import { useSport } from "@/lib/sport";
 import type { PlayerPropItem } from "@/api/client";
 
-type PropFilter = "all" | "player_points" | "player_rebounds" | "player_assists";
-
-const FILTER_LABELS: Record<PropFilter, string> = {
-  all: "All",
-  player_points: "Points",
-  player_rebounds: "Rebounds",
-  player_assists: "Assists",
-};
+const NBA_PROP_TYPES = ["player_points", "player_rebounds", "player_assists"];
+const MLB_PROP_TYPES = ["batter_hits", "batter_total_bases"];
 
 function groupByPlayer(props: PlayerPropItem[]): Map<string, PlayerPropItem[]> {
   const map = new Map<string, PlayerPropItem[]>();
@@ -26,32 +22,44 @@ interface PlayerPropsTabProps {
 }
 
 export function PlayerPropsTab({ props }: PlayerPropsTabProps) {
-  const [filter, setFilter] = useState<PropFilter>("all");
+  const { sport } = useSport();
+  const propTypeOptions = useMemo(
+    () => (sport === "MLB" ? MLB_PROP_TYPES : NBA_PROP_TYPES),
+    [sport],
+  );
+
+  const [filter, setFilter] = useState<string>("all");
+
+  // Reset filter when sport changes so we don't keep an invalid prop_type selected
+  useEffect(() => setFilter("all"), [sport]);
 
   const filtered =
     filter === "all" ? props : props.filter((p) => p.prop_type === filter);
 
   const grouped = groupByPlayer(filtered);
 
+  const buttons: { value: string; label: string }[] = [
+    { value: "all", label: "All" },
+    ...propTypeOptions.map((pt) => ({ value: pt, label: propTypeLabel(pt) })),
+  ];
+
   return (
     <div className="py-2">
       <div className="flex gap-2 px-4 pb-3">
-        {(["all", "player_points", "player_rebounds", "player_assists"] as PropFilter[]).map(
-          (f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
-                filter === f
-                  ? "bg-blue-950 text-blue-400"
-                  : "bg-slate-800 text-slate-500 hover:text-slate-400"
-              )}
-            >
-              {FILTER_LABELS[f]}
-            </button>
-          )
-        )}
+        {buttons.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => setFilter(b.value)}
+            className={cn(
+              "text-[10px] font-bold tracking-wide px-2 py-1 rounded cursor-pointer",
+              filter === b.value
+                ? "bg-blue-950 text-blue-400"
+                : "bg-slate-800 text-slate-500 hover:text-slate-400"
+            )}
+          >
+            {b.label}
+          </button>
+        ))}
       </div>
 
       {grouped.size === 0 ? (
@@ -81,7 +89,7 @@ export function PlayerPropsTab({ props }: PlayerPropsTabProps) {
                     <tr key={i} className="border-t border-slate-900">
                       <td className="px-2 py-1.5 text-slate-300 font-medium">{p.bookmaker}</td>
                       <td className="px-2 py-1.5 text-violet-400 font-semibold">
-                        {p.prop_type?.replace("player_", "") ?? "—"}
+                        {propTypeLabel(p.prop_type)}
                       </td>
                       <td className="px-2 py-1.5 text-blue-400 font-semibold">
                         {p.point ?? "—"}
